@@ -33,11 +33,11 @@ class MendelSeed(ABC):
         """Human readable environment name."""
         pass
 
-    @property
-    @abstractmethod
-    def genome_schema(self) -> dict:
-        """Describe the genome structure for display and debugging."""
-        pass
+    # @property
+    # @abstractmethod
+    # def genome_schema(self) -> dict:
+    #     """Describe the genome structure for display and debugging."""
+    #     pass
     
     @property
     def canvas_width(self) -> float:

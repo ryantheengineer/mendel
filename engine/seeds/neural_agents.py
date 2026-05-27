@@ -5,6 +5,7 @@ import copy
 from ..seed import MendelSeed
 from ..agents.neural_agent import NeuralAgent
 from ..canvas.canvas_environment import CanvasEnvironment
+from simplification.cutil import simplify_coords
 
 class NeuralAgentSeed(MendelSeed):
 
@@ -45,7 +46,7 @@ class NeuralAgentSeed(MendelSeed):
         return {
             'weights': [random.uniform(-2.0, 2.0)
                        for _ in range(self._n_weights())],
-            'lifespan': random.randint(500, 2000),
+            'lifespan': random.randint(100, 5000),
             'step_scale': random.uniform(1.0, 5.0),
             'turn_scale': random.uniform(0.1, 1.0),
         }
@@ -82,7 +83,7 @@ class NeuralAgentSeed(MendelSeed):
             agent.x, agent.y
         )
         return [nx, ny, edge, density, attr_dist, attr_angle]
-
+    
     def render(self, genome, output_path):
         self.canvas.reset()
 
@@ -109,7 +110,6 @@ class NeuralAgentSeed(MendelSeed):
                 )
                 self.canvas.record_position(agent.x, agent.y)
 
-                # Kill agents that wander off canvas
                 if (agent.x < 0 or agent.x > self.canvas.width or
                         agent.y < 0 or agent.y > self.canvas.height):
                     agent.alive = False
@@ -120,5 +120,50 @@ class NeuralAgentSeed(MendelSeed):
         return self.n_agents * genome['lifespan'] * 0.001
 
     def _write_svg(self, agents, output_path):
-        # SVG writing lives here — converts agent paths to polylines
-        pass
+        import svgwrite
+
+        dwg = svgwrite.Drawing(
+            output_path,
+            size=(f'{self.canvas.width}px', f'{self.canvas.height}px'),
+            viewBox=f'0 0 {self.canvas.width} {self.canvas.height}'
+        )
+
+        # White background
+        dwg.add(dwg.rect(
+            insert=(0, 0),
+            size=(self.canvas.width, self.canvas.height),
+            fill='white'
+        ))
+
+        for agent in agents:
+            if len(agent.path) < 2:
+                continue
+            
+            simplified = simplify_coords(agent.path, 1.0)
+
+            # Draw the agent's path as a polyline
+            dwg.add(dwg.polyline(
+                points=simplified,
+                stroke='black',
+                stroke_width=0.5,
+                fill='none',
+                stroke_linecap='round',
+                stroke_linejoin='round'
+            ))
+
+        dwg.save()
+
+    def preview(self, output_path, show=True):
+        import webbrowser
+        import os
+        if show:
+            webbrowser.open(f'file://{os.path.abspath(output_path)}')
+
+if __name__ == "__main__":
+    config = {'n_agents': 50,
+              }
+    
+    seed = NeuralAgentSeed(config)
+    genome = seed.random_genome()
+    seed.render(genome, 'output.svg')
+    seed.preview('output.svg')
